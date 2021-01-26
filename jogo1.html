@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+	<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style>
+		canvas{
+			border: 1px solid #d3d3d3;
+			background-color: #f1f1f1;
+		}
+		</style>
+	</head>
+	<body>
+	<script>
+		var personagem;
+		var obstaculos=[];
+		var pontos;
+		var bg;
+		var music = new Audio();
+		music.src = "universe.mp3";
+		music.volume = 0.2;
+
+		var start = false;
+		var imgfundo1;
+
+		window.onload=function(){		
+			document.addEventListener("keydown",teclado);
+			document.addEventListener("keyup",teclado);
+			startGame();
+		}		
+
+		function teclado(evento){
+			if (evento.type == "keydown"){
+				acelerar(-0.2);
+			}else{
+				acelerar(0.05);
+			}music.play();
+		}
+
+		function acelerar(n){
+			personagem.gravidade = n;
+		}
+		
+		function startGame(){
+			personagem = new componente(30,30,"superman.png",10,120,"image");
+			personagem.gravidade = 0.05;
+			bg = new componente(480,270,"met.png",0,0,"image");
+			pontos = new componente("30px", "Consolas","white",280,20,"text");
+			gameArea.start();
+		}
+
+		var gameArea={
+			canvas: document.createElement("canvas"),
+			start: function(){
+				this.canvas.width = 480;
+				this.canvas.height = 270;
+				this.context = this.canvas.getContext("2d");
+				document.body.insertBefore(this.canvas,document.body.childNodes[0]);
+				this.frameNo = 0;
+				this.interval = setInterval(updateGameArea,20);
+			},
+			clear:function(){
+				this.context.clearRect(0,0,this.canvas.width,this.canvas.height);
+			}
+		};
+
+		function componente(width, height, color, x, y, tipo){
+			this.type = tipo;
+			if(tipo == "image"){
+				this.image = new Image();
+				this.image.src = color;
+			}
+			this.pontos = 0;
+			this.width = width;
+			this.height = height;
+			this.velX = 0;
+			this.velY = 0;
+			this.x = x;
+			this.y = y;
+			this.gravidade = 0;
+			this.gravidadeVel = 0;
+			this.update = function(){
+				ctx = gameArea.context;
+				if (tipo == "image"){
+					ctx.drawImage(this.image,
+					this.x,
+					this.y,
+					this.width, this.height);
+				}else{
+				if (this.type == "text"){
+					ctx.font = this.width + " " + this.height;
+					ctx.fillStyle = color;
+					ctx.fillText(this.text,this.x,this.y);
+				}else{
+					ctx.fillStyle = color;
+					ctx.fillRect(this.x,this.y, this.width,this.height);
+				}
+				}
+			}
+			this.newPos = function(){
+				this.gravidadeVel += this.gravidade;
+				this.x += this.velX;
+				this.y += this.velY + this.gravidadeVel;
+				this.hitBottom();
+				this.hitTop();
+			}
+			this.hitBottom = function(){
+				var limite = gameArea.canvas.height - this.height;
+				if (this.y > limite){
+					this.y = limite;
+					this.gravidadeVel = 0;
+				}
+			}
+			this.hitTop = function(){
+				var limite2 = height - this.height;
+				if (this.y < limite2){
+					this.y = limite2;
+					this.gravidadeVel = 0;
+				}
+			}
+			this.crashWidth = function(otherobj,i){
+				var p_left = this.x;
+				var p_right = this.x + this.width;
+				var p_top = this.y;
+				var p_bottom = this.y + this.height;
+
+				var other_left = otherobj.x;
+				var other_right = otherobj.x + otherobj.width;
+				var other_top = otherobj.y;
+				var other_bottom = otherobj.y + otherobj.height;
+
+				var crash = true;
+				if (p_bottom < other_top || p_top > other_bottom ||
+					p_right<other_left || p_left > other_right){
+					crash = false;
+					if (p_left > other_right){
+						this.pontos++;
+						obstaculos.splice(i,2);
+					}
+				}
+				return crash;
+			}
+		}
+
+		function updateGameArea(){
+			var x, height, gap = 80, minH, maxH;
+			for (i=0; i < obstaculos.length;i++){
+				if (personagem.crashWidth(obstaculos[i],i)){
+					music.pause();
+					return;
+				}
+			}
+
+			gameArea.clear();
+			bg.newPos();
+			bg.update();
+			gameArea.frameNo += 1;
+			if (gameArea.frameNo == 1 || everyinterval(150)){
+				x = gameArea.canvas.width;
+				minH = 20;
+				maxH = 150;
+				height = Math.floor(Math.random()*(maxH-minH+1)+minH);
+				obstaculos.push(new componente(20,height,"KRY.png",x,20,"image"));
+				obstaculos.push(new componente(20,x - height - gap,"KRY.png",x,height+gap,"image"));
+			}
+			for (i=0;i<obstaculos.length;i++){
+				obstaculos[i].x += -1;
+				obstaculos[i].update();
+			}
+			pontos.text = "Pontos: " + personagem.pontos;
+			pontos.update();
+			personagem.newPos();
+			personagem.update();
+		}
+
+		function everyinterval(n){
+			if ((gameArea.frameNo / n) % 1 ==0){
+				return true;
+			}
+			return false;
+		}
+
+	</script>
+	</body>
+</html>
